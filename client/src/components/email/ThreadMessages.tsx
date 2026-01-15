@@ -41,7 +41,13 @@ export function ThreadMessages({ threadId, subject }: ThreadMessagesProps) {
     onNewEmail: useCallback(
       (email: Email) => {
         if (email.thread_id === threadId) {
-          setEmails((prev) => [...prev, email]);
+          setEmails((prev) => {
+            // Avoid duplicates from race between refetch and realtime
+            if (prev.some((e) => e.id === email.id)) {
+              return prev;
+            }
+            return [...prev, email];
+          });
           setExpandedIds((prev) => new Set([...prev, email.id]));
         }
       },

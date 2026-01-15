@@ -18,8 +18,15 @@ export function QuickReply({ replyToEmail, threadId, onSent }: QuickReplyProps) 
     replyToEmail.email_address_id || addresses[0]?.id || ''
   );
 
-  // Determine reply-to address
-  const replyTo = replyToEmail.reply_to || replyToEmail.from_address;
+  // Determine reply-to address based on direction
+  const replyTo = (() => {
+    if (replyToEmail.direction === 'outbound') {
+      // If we sent the last email, reply to the person we sent it to
+      return replyToEmail.to_addresses?.[0]?.email || replyToEmail.from_address;
+    }
+    // If we received the last email, reply to the sender
+    return replyToEmail.reply_to || replyToEmail.from_address;
+  })();
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {

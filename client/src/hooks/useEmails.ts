@@ -37,18 +37,21 @@ export function useEmails(options: UseEmailsOptions = {}) {
       `
       )
       .eq('user_id', user.id)
-      .order('received_at', { ascending: false })
       .limit(limit);
 
     if (addressId) {
       query = query.eq('email_address_id', addressId);
     }
     if (threadId) {
-      query = query.eq('thread_id', threadId).order('received_at', { ascending: true });
+      query = query.eq('thread_id', threadId);
     }
     if (direction) {
       query = query.eq('direction', direction);
     }
+
+    // Thread view: oldest first (chronological conversation)
+    // Inbox view: newest first (latest emails on top)
+    query = query.order('received_at', { ascending: !!threadId });
 
     const { data, error: fetchError } = await query;
 

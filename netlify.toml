@@ -3,6 +3,13 @@
   publish = "client/dist"
   functions = "netlify/functions"
 
+[dev]
+  command = "npm --prefix client run dev"
+  targetPort = 5173
+  port = 8888
+  autoLaunch = false
+  framework = "#custom"
+
 [[plugins]]
   package = "@netlify/plugin-functions-install-core"
 
