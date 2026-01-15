@@ -1,4 +1,4 @@
-export const DEFAULT_DOMAIN = 'setdomain.com';
+export const DEFAULT_DOMAIN = import.meta.env.VITE_EMAIL_DOMAIN || 'example.com';
 
 export const EMAIL_ADDRESS_PATTERN = /^[a-z0-9._-]+$/;
 
