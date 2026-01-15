@@ -183,7 +183,7 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
 
       if (!isChangingFolder && oldSortOrder === newSortOrder) return;
 
-      const updates: Promise<unknown>[] = [];
+      const updates: PromiseLike<unknown>[] = [];
 
       if (isChangingFolder) {
         // Moving to a different folder - just append at new position
@@ -195,6 +195,7 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
                 .from('email_addresses')
                 .update({ sort_order: a.sort_order + 1 })
                 .eq('id', a.id)
+                .then()
             );
           }
         });
@@ -208,6 +209,7 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
                   .from('email_addresses')
                   .update({ sort_order: a.sort_order - 1 })
                   .eq('id', a.id)
+                  .then()
               );
             }
           });
@@ -219,6 +221,7 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
                   .from('email_addresses')
                   .update({ sort_order: a.sort_order + 1 })
                   .eq('id', a.id)
+                  .then()
               );
             }
           });
@@ -231,6 +234,7 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
           .from('email_addresses')
           .update({ folder_id: folderId, sort_order: newSortOrder })
           .eq('id', addressId)
+          .then()
       );
 
       await Promise.all(updates);

@@ -147,7 +147,7 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
       if (oldSortOrder === newSortOrder) return;
 
       // Update sort orders for affected folders
-      const updates: Promise<unknown>[] = [];
+      const updates: PromiseLike<unknown>[] = [];
 
       if (newSortOrder > oldSortOrder) {
         // Moving down: decrement items between old and new position
@@ -158,6 +158,7 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
                 .from('address_folders')
                 .update({ sort_order: f.sort_order - 1 })
                 .eq('id', f.id)
+                .then()
             );
           }
         });
@@ -170,6 +171,7 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
                 .from('address_folders')
                 .update({ sort_order: f.sort_order + 1 })
                 .eq('id', f.id)
+                .then()
             );
           }
         });
@@ -181,6 +183,7 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
           .from('address_folders')
           .update({ sort_order: newSortOrder })
           .eq('id', folderId)
+          .then()
       );
 
       await Promise.all(updates);
