@@ -316,7 +316,7 @@ export function Sidebar({ onCreateAddress }: SidebarProps) {
 
   return (
     <>
-      <aside className="flex h-full w-64 flex-col border-r border-gray-200 bg-white">
+      <aside className="flex h-full w-[25rem] flex-col border-r border-gray-200 bg-white">
         <div className="flex h-16 items-center border-b border-gray-200 px-4">
           <h1 className="text-xl font-semibold text-gray-900">Email Client</h1>
         </div>
