@@ -1,0 +1,12 @@
+{
+  "name": "bulk-email-functions",
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^2.8.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.4"
+  }
+}

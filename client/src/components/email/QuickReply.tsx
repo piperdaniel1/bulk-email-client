@@ -1,0 +1,120 @@
+import { useState, useCallback } from 'react';
+import { useAddresses } from '@/hooks/useAddresses';
+import { useSendEmail } from '@/hooks/useSendEmail';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import type { Email } from '@/types';
+
+interface QuickReplyProps {
+  replyToEmail: Email;
+  threadId: string;
+  onSent?: () => void;
+}
+
+export function QuickReply({ replyToEmail, threadId, onSent }: QuickReplyProps) {
+  const { addresses } = useAddresses();
+  const { send, sending, error, clearError } = useSendEmail();
+  const [body, setBody] = useState('');
+  const [fromAddressId, setFromAddressId] = useState(
+    replyToEmail.email_address_id || addresses[0]?.id || ''
+  );
+
+  // Determine reply-to address
+  const replyTo = replyToEmail.reply_to || replyToEmail.from_address;
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      if (!fromAddressId || !body.trim()) return;
+
+      const result = await send({
+        fromAddressId,
+        to: [replyTo],
+        subject: replyToEmail.subject?.startsWith('Re:')
+          ? replyToEmail.subject
+          : `Re: ${replyToEmail.subject || '(no subject)'}`,
+        bodyText: body,
+        inReplyTo: replyToEmail.message_id,
+        threadId,
+      });
+
+      if (result) {
+        setBody('');
+        onSent?.();
+      }
+    },
+    [fromAddressId, body, replyTo, replyToEmail, threadId, send, onSent]
+  );
+
+  // Update fromAddressId when addresses load
+  if (!fromAddressId && addresses.length > 0) {
+    setFromAddressId(replyToEmail.email_address_id || addresses[0].id);
+  }
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <form onSubmit={handleSubmit}>
+        <div className="mb-3 flex items-center gap-2 text-sm">
+          <span className="text-gray-500">Reply as:</span>
+          <select
+            value={fromAddressId}
+            onChange={(e) => setFromAddressId(e.target.value)}
+            className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+          >
+            {addresses.map((addr) => (
+              <option key={addr.id} value={addr.id}>
+                {addr.display_name
+                  ? `${addr.display_name} <${addr.local_part}@${addr.domain}>`
+                  : `${addr.local_part}@${addr.domain}`}
+              </option>
+            ))}
+          </select>
+          <span className="text-gray-400">to</span>
+          <span className="text-gray-700">{replyTo}</span>
+        </div>
+
+        <textarea
+          value={body}
+          onChange={(e) => {
+            setBody(e.target.value);
+            clearError();
+          }}
+          placeholder="Write your reply..."
+          rows={4}
+          className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+
+        {error && (
+          <div className="mt-2 text-sm text-red-600">{error}</div>
+        )}
+
+        <div className="mt-3 flex justify-end">
+          <button
+            type="submit"
+            disabled={sending || !body.trim() || !fromAddressId}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {sending ? (
+              <>
+                <LoadingSpinner size="sm" className="text-white" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                  />
+                </svg>
+                Send Reply
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
