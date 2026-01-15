@@ -18,6 +18,17 @@ interface SendEmailRequest {
   body_html?: string;
   in_reply_to?: string;
   thread_id?: string;
+  attachments?: Array<{
+    storage_path: string;
+    filename: string;
+    content_type: string;
+  }>;
+}
+
+interface AttachmentData {
+  buffer: Buffer;
+  filename: string;
+  contentType: string;
 }
 
 function generateMessageId(domain: string): string {
@@ -37,8 +48,10 @@ async function sendViaMailgun(params: {
   messageId: string;
   inReplyTo?: string;
   references?: string;
+  attachments?: AttachmentData[];
 }): Promise<{ id: string }> {
-  const formData = new URLSearchParams();
+  // Use FormData for multipart support (required for attachments)
+  const formData = new FormData();
   formData.append('from', params.from);
   params.to.forEach((addr) => formData.append('to', addr));
   params.cc?.forEach((addr) => formData.append('cc', addr));
@@ -50,15 +63,23 @@ async function sendViaMailgun(params: {
   if (params.inReplyTo) formData.append('h:In-Reply-To', params.inReplyTo);
   if (params.references) formData.append('h:References', params.references);
 
+  // Add attachments
+  if (params.attachments) {
+    for (const att of params.attachments) {
+      const blob = new Blob([att.buffer], { type: att.contentType });
+      formData.append('attachment', blob, att.filename);
+    }
+  }
+
   const response = await fetch(
     `https://api.mailgun.net/v3/${mailgunDomain}/messages`,
     {
       method: 'POST',
       headers: {
         Authorization: 'Basic ' + Buffer.from(`api:${mailgunApiKey}`).toString('base64'),
-        'Content-Type': 'application/x-www-form-urlencoded',
+        // Don't set Content-Type - let fetch set it with boundary for multipart
       },
-      body: formData.toString(),
+      body: formData,
     }
   );
 
@@ -136,6 +157,28 @@ export const handler: Handler = async (event: HandlerEvent) => {
       }
     }
 
+    // Fetch attachments from Supabase Storage
+    const attachmentData: AttachmentData[] = [];
+    if (request.attachments && request.attachments.length > 0) {
+      for (const att of request.attachments) {
+        const { data, error: downloadError } = await supabase.storage
+          .from('attachments')
+          .download(att.storage_path);
+
+        if (downloadError) {
+          console.error(`Failed to download attachment ${att.filename}:`, downloadError);
+          continue;
+        }
+
+        const buffer = Buffer.from(await data.arrayBuffer());
+        attachmentData.push({
+          buffer,
+          filename: att.filename,
+          contentType: att.content_type,
+        });
+      }
+    }
+
     // Send via Mailgun
     const mailgunResponse = await sendViaMailgun({
       from: fromFormatted,
@@ -148,6 +191,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       messageId,
       inReplyTo: request.in_reply_to,
       references: references || undefined,
+      attachments: attachmentData.length > 0 ? attachmentData : undefined,
     });
 
     // Determine thread
@@ -204,6 +248,27 @@ export const handler: Handler = async (event: HandlerEvent) => {
     if (emailError) {
       console.error('Error saving sent email:', emailError);
       // Email was sent, just couldn't save - still return success
+    }
+
+    // Save attachment records
+    if (email && request.attachments && request.attachments.length > 0) {
+      for (const att of request.attachments) {
+        // Get file size from the downloaded data
+        const attData = attachmentData.find((a) => a.filename === att.filename);
+        const sizeBytes = attData?.buffer.length || 0;
+
+        const { error: attError } = await supabase.from('attachments').insert({
+          email_id: email.id,
+          filename: att.filename,
+          content_type: att.content_type,
+          size_bytes: sizeBytes,
+          storage_path: att.storage_path,
+        });
+
+        if (attError) {
+          console.error(`Error saving attachment record for ${att.filename}:`, attError);
+        }
+      }
     }
 
     return {

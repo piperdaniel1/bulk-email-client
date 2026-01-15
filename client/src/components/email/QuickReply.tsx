@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useSendEmail } from '@/hooks/useSendEmail';
+import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { AttachmentPicker } from './AttachmentPicker';
 import type { Email } from '@/types';
 
 interface QuickReplyProps {
@@ -13,6 +15,14 @@ interface QuickReplyProps {
 export function QuickReply({ replyToEmail, threadId, onSent }: QuickReplyProps) {
   const { addresses } = useAddresses();
   const { send, sending, error, clearError } = useSendEmail();
+  const {
+    attachments: pendingAttachments,
+    uploading,
+    addFiles,
+    removeAttachment,
+    uploadAll,
+    reset: resetAttachments,
+  } = useAttachmentUpload();
   const [body, setBody] = useState('');
   const [fromAddressId, setFromAddressId] = useState(
     replyToEmail.email_address_id || addresses[0]?.id || ''
@@ -34,6 +44,18 @@ export function QuickReply({ replyToEmail, threadId, onSent }: QuickReplyProps) 
 
       if (!fromAddressId || !body.trim()) return;
 
+      // Upload attachments first if any
+      const tempEmailId = crypto.randomUUID();
+      let uploadedAttachments: Array<{
+        storage_path: string;
+        filename: string;
+        content_type: string;
+      }> = [];
+
+      if (pendingAttachments.some((a) => a.status === 'pending')) {
+        uploadedAttachments = await uploadAll(tempEmailId);
+      }
+
       const result = await send({
         fromAddressId,
         to: [replyTo],
@@ -43,14 +65,16 @@ export function QuickReply({ replyToEmail, threadId, onSent }: QuickReplyProps) 
         bodyText: body,
         inReplyTo: replyToEmail.message_id,
         threadId,
+        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
       });
 
       if (result) {
         setBody('');
+        resetAttachments();
         onSent?.();
       }
     },
-    [fromAddressId, body, replyTo, replyToEmail, threadId, send, onSent]
+    [fromAddressId, body, replyTo, replyToEmail, threadId, send, onSent, pendingAttachments, uploadAll, resetAttachments]
   );
 
   // Update fromAddressId when addresses load
@@ -97,6 +121,15 @@ export function QuickReply({ replyToEmail, threadId, onSent }: QuickReplyProps) 
           className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
 
+        <div className="mt-2">
+          <AttachmentPicker
+            attachments={pendingAttachments}
+            onAddFiles={addFiles}
+            onRemove={removeAttachment}
+            disabled={sending || uploading}
+          />
+        </div>
+
         {error && (
           <div className="mt-2 text-sm text-red-600">{error}</div>
         )}
@@ -104,13 +137,13 @@ export function QuickReply({ replyToEmail, threadId, onSent }: QuickReplyProps) 
         <div className="mt-3 flex justify-end">
           <button
             type="submit"
-            disabled={sending || !body.trim() || !fromAddressId}
+            disabled={sending || uploading || !body.trim() || !fromAddressId}
             className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {sending ? (
+            {sending || uploading ? (
               <>
                 <LoadingSpinner size="sm" className="text-white" />
-                Sending...
+                {uploading ? 'Uploading...' : 'Sending...'}
               </>
             ) : (
               <>

@@ -10,6 +10,11 @@ interface SendEmailParams {
   bodyHtml?: string;
   inReplyTo?: string;
   threadId?: string;
+  attachments?: Array<{
+    storage_path: string;
+    filename: string;
+    content_type: string;
+  }>;
 }
 
 interface SendEmailResponse {
@@ -42,6 +47,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailRespo
       body_html: params.bodyHtml,
       in_reply_to: params.inReplyTo,
       thread_id: params.threadId,
+      attachments: params.attachments,
     }),
   });
 

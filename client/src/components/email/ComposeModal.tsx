@@ -1,7 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useSendEmail } from '@/hooks/useSendEmail';
+import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { AttachmentPicker } from './AttachmentPicker';
 
 interface ComposeModalProps {
   isOpen: boolean;
@@ -17,6 +19,14 @@ interface ComposeModalProps {
 export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
   const { addresses } = useAddresses();
   const { send, sending, error, clearError } = useSendEmail();
+  const {
+    attachments: pendingAttachments,
+    uploading,
+    addFiles,
+    removeAttachment,
+    uploadAll,
+    reset: resetAttachments,
+  } = useAttachmentUpload();
 
   const [fromAddressId, setFromAddressId] = useState(addresses[0]?.id || '');
   const [to, setTo] = useState(replyTo?.email || '');
@@ -36,6 +46,18 @@ export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
       const toAddresses = to.split(',').map((e) => e.trim()).filter(Boolean);
       const ccAddresses = cc ? cc.split(',').map((e) => e.trim()).filter(Boolean) : undefined;
 
+      // Upload attachments first if any
+      const tempEmailId = crypto.randomUUID();
+      let uploadedAttachments: Array<{
+        storage_path: string;
+        filename: string;
+        content_type: string;
+      }> = [];
+
+      if (pendingAttachments.some((a) => a.status === 'pending')) {
+        uploadedAttachments = await uploadAll(tempEmailId);
+      }
+
       const result = await send({
         fromAddressId,
         to: toAddresses,
@@ -44,6 +66,7 @@ export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
         bodyText: body,
         inReplyTo: replyTo?.messageId,
         threadId: replyTo?.threadId,
+        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
       });
 
       if (result) {
@@ -52,16 +75,18 @@ export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
         setCc('');
         setSubject('');
         setBody('');
+        resetAttachments();
         onClose();
       }
     },
-    [fromAddressId, to, cc, subject, body, replyTo, send, onClose]
+    [fromAddressId, to, cc, subject, body, replyTo, send, onClose, pendingAttachments, uploadAll, resetAttachments]
   );
 
   const handleClose = useCallback(() => {
     clearError();
+    resetAttachments();
     onClose();
-  }, [clearError, onClose]);
+  }, [clearError, resetAttachments, onClose]);
 
   // ESC to close modal
   useEffect(() => {
@@ -180,6 +205,13 @@ export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
               rows={12}
               className="w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />
+
+            <AttachmentPicker
+              attachments={pendingAttachments}
+              onAddFiles={addFiles}
+              onRemove={removeAttachment}
+              disabled={sending || uploading}
+            />
           </div>
 
           {error && (
@@ -198,13 +230,13 @@ export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
             </button>
             <button
               type="submit"
-              disabled={sending || !fromAddressId || !to.trim() || !subject.trim()}
+              disabled={sending || uploading || !fromAddressId || !to.trim() || !subject.trim()}
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              {sending ? (
+              {sending || uploading ? (
                 <>
                   <LoadingSpinner size="sm" className="text-white" />
-                  Sending...
+                  {uploading ? 'Uploading...' : 'Sending...'}
                 </>
               ) : (
                 <>

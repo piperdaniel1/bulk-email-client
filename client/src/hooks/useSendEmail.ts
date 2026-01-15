@@ -11,6 +11,11 @@ interface SendEmailParams {
   bodyHtml?: string;
   inReplyTo?: string;
   threadId?: string;
+  attachments?: Array<{
+    storage_path: string;
+    filename: string;
+    content_type: string;
+  }>;
 }
 
 export function useSendEmail() {

@@ -1,10 +1,98 @@
 import type { Handler, HandlerEvent } from '@netlify/functions';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const mailgunApiKey = process.env.MAILGUN_API_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10 MB
+
+interface MailgunAttachment {
+  url: string;
+  'content-type': string;
+  name: string;
+  size: number;
+}
+
+function sanitizeFilename(filename: string): string {
+  return filename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200);
+}
+
+async function processAttachments(
+  supabaseClient: SupabaseClient,
+  attachmentsJson: string | undefined,
+  userId: string,
+  emailId: string
+): Promise<void> {
+  if (!attachmentsJson) return;
+
+  let attachments: MailgunAttachment[];
+  try {
+    attachments = JSON.parse(attachmentsJson);
+  } catch (e) {
+    console.error('Failed to parse attachments JSON:', e);
+    return;
+  }
+
+  for (const att of attachments) {
+    try {
+      // Skip attachments that are too large
+      if (att.size > MAX_ATTACHMENT_SIZE) {
+        console.log(`Skipping attachment "${att.name}" - exceeds 10MB limit (${att.size} bytes)`);
+        continue;
+      }
+
+      // Download from Mailgun
+      const response = await fetch(att.url, {
+        headers: {
+          Authorization: 'Basic ' + Buffer.from(`api:${mailgunApiKey}`).toString('base64'),
+        },
+      });
+
+      if (!response.ok) {
+        console.error(`Failed to download attachment "${att.name}": ${response.status}`);
+        continue;
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+
+      // Upload to Supabase Storage
+      const storagePath = `${userId}/${emailId}/${crypto.randomUUID()}_${sanitizeFilename(att.name)}`;
+      const { error: uploadError } = await supabaseClient.storage
+        .from('attachments')
+        .upload(storagePath, buffer, {
+          contentType: att['content-type'],
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error(`Failed to upload attachment "${att.name}":`, uploadError);
+        continue;
+      }
+
+      // Insert attachment record
+      const { error: insertError } = await supabaseClient.from('attachments').insert({
+        email_id: emailId,
+        filename: att.name,
+        content_type: att['content-type'],
+        size_bytes: att.size,
+        storage_path: storagePath,
+        mailgun_url: att.url,
+      });
+
+      if (insertError) {
+        console.error(`Failed to insert attachment record for "${att.name}":`, insertError);
+        continue;
+      }
+
+      console.log(`Processed attachment: ${att.name} (${att.size} bytes)`);
+    } catch (error) {
+      console.error(`Error processing attachment "${att.name}":`, error);
+    }
+  }
+}
 
 function parseEmailAddress(address: string): { email: string; name?: string } {
   // Parse "Name <email@example.com>" format
@@ -95,7 +183,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       : [];
 
     // Insert the email
-    const { error: emailError } = await supabase
+    const { data: insertedEmail, error: emailError } = await supabase
       .from('emails')
       .insert({
         user_id: userId,
@@ -115,12 +203,17 @@ export const handler: Handler = async (event: HandlerEvent) => {
         received_at: payload.timestamp
           ? new Date(parseInt(payload.timestamp) * 1000).toISOString()
           : new Date().toISOString(),
-      });
+      })
+      .select('id')
+      .single();
 
-    if (emailError) {
+    if (emailError || !insertedEmail) {
       console.error('Error inserting email:', emailError);
       return { statusCode: 500, body: 'Database error' };
     }
+
+    // Process attachments if any
+    await processAttachments(supabase, payload.attachments, userId, insertedEmail.id);
 
     console.log(`Email received for ${recipient} from ${fromParsed.email}`);
     return { statusCode: 200, body: 'OK' };

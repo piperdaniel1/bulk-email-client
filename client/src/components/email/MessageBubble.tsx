@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Email } from '@/types';
 import { Avatar } from '@/components/common/Avatar';
 import { Badge } from '@/components/common/Badge';
+import { AttachmentList } from './AttachmentList';
 import { formatDate } from '@/utils/formatters';
 
 interface MessageBubbleProps {
@@ -111,6 +112,8 @@ export function MessageBubble({ email, isExpanded = true, onToggle }: MessageBub
           )}
 
           {renderBody()}
+
+          <AttachmentList emailId={email.id} />
         </div>
       )}
     </div>
