@@ -1,9 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
+import { DEFAULT_DOMAIN } from '@/utils/constants';
 import type { EmailAddress } from '@/types';
-
-const DEFAULT_DOMAIN = 'setdomain.com';
 
 export function useAddresses() {
   const { user } = useAuth();
@@ -55,6 +54,7 @@ export function useAddresses() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
+          console.log('Realtime payload received:', payload);
           if (payload.eventType === 'INSERT') {
             setAddresses((prev) => [payload.new as EmailAddress, ...prev]);
           } else if (payload.eventType === 'DELETE') {
@@ -70,7 +70,9 @@ export function useAddresses() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log('Realtime subscription status:', status, err);
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -93,6 +95,10 @@ export function useAddresses() {
         .single();
 
       if (createError) throw createError;
+
+      // Immediately update local state
+      setAddresses((prev) => [data as EmailAddress, ...prev]);
+
       return data as EmailAddress;
     },
     [user]
@@ -105,6 +111,9 @@ export function useAddresses() {
       .eq('id', addressId);
 
     if (deleteError) throw deleteError;
+
+    // Immediately update local state
+    setAddresses((prev) => prev.filter((a) => a.id !== addressId));
   }, []);
 
   const updateAddress = useCallback(
