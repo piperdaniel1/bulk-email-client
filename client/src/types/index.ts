@@ -1,9 +1,19 @@
+export interface AddressFolder {
+  id: string;
+  user_id: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface EmailAddress {
   id: string;
   user_id: string;
   local_part: string;
   domain: string;
   display_name: string | null;
+  folder_id: string | null;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }

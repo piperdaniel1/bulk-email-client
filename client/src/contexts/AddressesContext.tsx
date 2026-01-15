@@ -8,10 +8,13 @@ interface AddressesContextType {
   addresses: EmailAddress[];
   loading: boolean;
   error: string | null;
-  createAddress: (localPart: string, displayName?: string) => Promise<EmailAddress>;
+  createAddress: (localPart: string, displayName?: string, folderId?: string) => Promise<EmailAddress>;
   deleteAddress: (addressId: string) => Promise<void>;
-  updateAddress: (addressId: string, updates: { display_name?: string }) => Promise<EmailAddress>;
+  updateAddress: (addressId: string, updates: { display_name?: string; folder_id?: string | null; sort_order?: number }) => Promise<EmailAddress>;
+  moveToFolder: (addressId: string, folderId: string | null) => Promise<void>;
+  reorderAddress: (addressId: string, newSortOrder: number, folderId: string | null) => Promise<void>;
   refetch: () => Promise<void>;
+  getAddressesByFolder: (folderId: string | null) => EmailAddress[];
 }
 
 const AddressesContext = createContext<AddressesContextType | null>(null);
@@ -36,7 +39,8 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
       .from('email_addresses')
       .select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      .order('folder_id', { ascending: true, nullsFirst: true })
+      .order('sort_order', { ascending: true });
 
     if (fetchError) {
       setError(fetchError.message);
@@ -94,9 +98,20 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
+  const getAddressesByFolder = useCallback(
+    (folderId: string | null) => {
+      return addresses.filter(a => a.folder_id === folderId);
+    },
+    [addresses]
+  );
+
   const createAddress = useCallback(
-    async (localPart: string, displayName?: string) => {
+    async (localPart: string, displayName?: string, folderId?: string) => {
       if (!user) throw new Error('Not authenticated');
+
+      // Get max sort_order for the target folder
+      const folderAddresses = addresses.filter(a => a.folder_id === (folderId || null));
+      const maxOrder = folderAddresses.reduce((max, a) => Math.max(max, a.sort_order), -1);
 
       const { data, error: createError } = await supabase
         .from('email_addresses')
@@ -105,6 +120,8 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
           local_part: localPart.toLowerCase().trim(),
           domain: DEFAULT_DOMAIN,
           display_name: displayName?.trim() || null,
+          folder_id: folderId || null,
+          sort_order: maxOrder + 1,
         })
         .select()
         .single();
@@ -112,7 +129,7 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
       if (createError) throw createError;
       return data as EmailAddress;
     },
-    [user]
+    [user, addresses]
   );
 
   const deleteAddress = useCallback(async (addressId: string) => {
@@ -125,7 +142,7 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateAddress = useCallback(
-    async (addressId: string, updates: { display_name?: string }) => {
+    async (addressId: string, updates: { display_name?: string; folder_id?: string | null; sort_order?: number }) => {
       const { data, error: updateError } = await supabase
         .from('email_addresses')
         .update(updates)
@@ -139,6 +156,89 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const moveToFolder = useCallback(
+    async (addressId: string, folderId: string | null) => {
+      // Get max sort_order in target folder
+      const targetAddresses = addresses.filter(a => a.folder_id === folderId);
+      const maxOrder = targetAddresses.reduce((max, a) => Math.max(max, a.sort_order), -1);
+
+      const { error: updateError } = await supabase
+        .from('email_addresses')
+        .update({ folder_id: folderId, sort_order: maxOrder + 1 })
+        .eq('id', addressId);
+
+      if (updateError) throw updateError;
+    },
+    [addresses]
+  );
+
+  const reorderAddress = useCallback(
+    async (addressId: string, newSortOrder: number, folderId: string | null) => {
+      const address = addresses.find(a => a.id === addressId);
+      if (!address) return;
+
+      const folderAddresses = addresses.filter(a => a.folder_id === folderId);
+      const oldSortOrder = address.sort_order;
+      const isChangingFolder = address.folder_id !== folderId;
+
+      if (!isChangingFolder && oldSortOrder === newSortOrder) return;
+
+      const updates: Promise<unknown>[] = [];
+
+      if (isChangingFolder) {
+        // Moving to a different folder - just append at new position
+        // Shift items at or after new position in target folder
+        folderAddresses.forEach(a => {
+          if (a.sort_order >= newSortOrder) {
+            updates.push(
+              supabase
+                .from('email_addresses')
+                .update({ sort_order: a.sort_order + 1 })
+                .eq('id', a.id)
+            );
+          }
+        });
+      } else {
+        // Reordering within same folder
+        if (newSortOrder > oldSortOrder) {
+          folderAddresses.forEach(a => {
+            if (a.sort_order > oldSortOrder && a.sort_order <= newSortOrder) {
+              updates.push(
+                supabase
+                  .from('email_addresses')
+                  .update({ sort_order: a.sort_order - 1 })
+                  .eq('id', a.id)
+              );
+            }
+          });
+        } else {
+          folderAddresses.forEach(a => {
+            if (a.sort_order >= newSortOrder && a.sort_order < oldSortOrder) {
+              updates.push(
+                supabase
+                  .from('email_addresses')
+                  .update({ sort_order: a.sort_order + 1 })
+                  .eq('id', a.id)
+              );
+            }
+          });
+        }
+      }
+
+      // Update the moved address
+      updates.push(
+        supabase
+          .from('email_addresses')
+          .update({ folder_id: folderId, sort_order: newSortOrder })
+          .eq('id', addressId)
+      );
+
+      await Promise.all(updates);
+      await fetchAddresses();
+    },
+    [addresses, fetchAddresses]
+  );
+
   return (
     <AddressesContext.Provider
       value={{
@@ -148,7 +248,10 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
         createAddress,
         deleteAddress,
         updateAddress,
+        moveToFolder,
+        reorderAddress,
         refetch: fetchAddresses,
+        getAddressesByFolder,
       }}
     >
       {children}

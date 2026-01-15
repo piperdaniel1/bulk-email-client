@@ -1,16 +1,18 @@
 import { useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { EmailList } from '@/components/email/EmailList';
 import { useAddresses } from '@/hooks/useAddresses';
 import { CopyAddressButton } from '@/components/address/CopyAddressButton';
+import { DeleteAddressModal } from '@/components/address/DeleteAddressModal';
 import { formatEmailAddress } from '@/utils/formatters';
 
 export function AddressInbox() {
   const { addressId } = useParams<{ addressId: string }>();
+  const navigate = useNavigate();
   const { addresses, deleteAddress } = useAddresses();
   const [searchQuery, setSearchQuery] = useState('');
-  const [deleting, setDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const address = addresses.find((a) => a.id === addressId);
 
@@ -20,21 +22,9 @@ export function AddressInbox() {
 
   const handleDelete = useCallback(async () => {
     if (!address) return;
-
-    const fullEmail = formatEmailAddress(address.local_part, address.domain);
-    if (!confirm(`Are you sure you want to delete ${fullEmail}? All emails will be lost.`)) {
-      return;
-    }
-
-    setDeleting(true);
-    try {
-      await deleteAddress(address.id);
-      window.location.href = '/';
-    } catch (err) {
-      console.error('Failed to delete address:', err);
-      setDeleting(false);
-    }
-  }, [address, deleteAddress]);
+    await deleteAddress(address.id);
+    navigate('/');
+  }, [address, deleteAddress, navigate]);
 
   return (
     <AppShell onSearch={handleSearch}>
@@ -66,17 +56,25 @@ export function AddressInbox() {
               </div>
             </div>
             <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+              onClick={() => setShowDeleteModal(true)}
+              className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50"
             >
-              {deleting ? 'Deleting...' : 'Delete Address'}
+              Delete Address
             </button>
           </div>
         )}
 
         <EmailList addressId={addressId} searchQuery={searchQuery} />
       </div>
+
+      {address && (
+        <DeleteAddressModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDelete}
+          email={formatEmailAddress(address.local_part, address.domain)}
+        />
+      )}
     </AppShell>
   );
 }

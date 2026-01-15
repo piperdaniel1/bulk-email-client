@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { FoldersProvider } from '@/contexts/FoldersContext';
 import { AddressesProvider } from '@/contexts/AddressesContext';
 import { Login } from '@/pages/Login';
 import { UnifiedInbox } from '@/pages/UnifiedInbox';
@@ -22,7 +23,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
-  return <AddressesProvider>{children}</AddressesProvider>;
+  return (
+    <FoldersProvider>
+      <AddressesProvider>{children}</AddressesProvider>
+    </FoldersProvider>
+  );
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
