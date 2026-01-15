@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useSendEmail } from '@/hooks/useSendEmail';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -62,6 +62,18 @@ export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
     clearError();
     onClose();
   }, [clearError, onClose]);
+
+  // ESC to close modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, handleClose]);
 
   // Update fromAddressId when addresses load
   if (!fromAddressId && addresses.length > 0) {
@@ -158,7 +170,13 @@ export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
                 setBody(e.target.value);
                 clearError();
               }}
-              placeholder="Write your message..."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                  e.preventDefault();
+                  e.currentTarget.form?.requestSubmit();
+                }
+              }}
+              placeholder="Write your message... (Ctrl+Enter to send)"
               rows={12}
               className="w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />

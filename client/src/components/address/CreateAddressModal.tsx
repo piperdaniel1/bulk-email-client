@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useClipboard } from '@/hooks/useClipboard';
 import { DEFAULT_DOMAIN, EMAIL_ADDRESS_PATTERN } from '@/utils/constants';
@@ -73,6 +73,18 @@ export function CreateAddressModal({ isOpen, onClose }: CreateAddressModalProps)
     setError(null);
     onClose();
   }, [onClose]);
+
+  // ESC to close modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, handleClose]);
 
   if (!isOpen) return null;
 

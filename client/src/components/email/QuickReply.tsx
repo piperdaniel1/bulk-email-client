@@ -86,7 +86,13 @@ export function QuickReply({ replyToEmail, threadId, onSent }: QuickReplyProps) 
             setBody(e.target.value);
             clearError();
           }}
-          placeholder="Write your reply..."
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }
+          }}
+          placeholder="Write your reply... (Ctrl+Enter to send)"
           rows={4}
           className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
