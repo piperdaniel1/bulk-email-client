@@ -8,8 +8,10 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
   DragStartEvent,
   DragEndEvent,
+  DragOverEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -29,6 +31,28 @@ import type { EmailAddress, AddressFolder } from '@/types';
 
 interface SidebarProps {
   onCreateAddress: () => void;
+}
+
+// Unfiled drop zone component
+function UnfiledDropZone({ isOver, showLabel }: { isOver: boolean; showLabel: boolean }) {
+  const { setNodeRef } = useDroppable({ id: 'unfiled-drop' });
+
+  if (!showLabel) {
+    return <div ref={setNodeRef} className="h-1" />;
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+        isOver
+          ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-400 ring-inset'
+          : 'text-gray-400'
+      }`}
+    >
+      Unfiled
+    </div>
+  );
 }
 
 // Sortable address item
@@ -75,6 +99,7 @@ function FolderSection({
   onToggle,
   onRename,
   onDelete,
+  isDropTarget,
 }: {
   folder: AddressFolder;
   addresses: EmailAddress[];
@@ -82,6 +107,7 @@ function FolderSection({
   onToggle: () => void;
   onRename: () => void;
   onDelete: () => void;
+  isDropTarget: boolean;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const {
@@ -102,7 +128,11 @@ function FolderSection({
   return (
     <div ref={setNodeRef} style={style} className="mb-1">
       <div
-        className="group flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-gray-100"
+        className={`group flex items-center justify-between rounded-lg px-2 py-1.5 transition-colors ${
+          isDropTarget
+            ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset'
+            : 'hover:bg-gray-100'
+        }`}
         {...attributes}
         {...listeners}
       >
@@ -207,6 +237,7 @@ export function Sidebar({ onCreateAddress }: SidebarProps) {
   const [editingFolder, setEditingFolder] = useState<AddressFolder | null>(null);
   const [deletingFolder, setDeletingFolder] = useState<AddressFolder | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
 
   const loading = addressesLoading || foldersLoading;
   const unfiledAddresses = getAddressesByFolder(null);
@@ -238,10 +269,15 @@ export function Sidebar({ onCreateAddress }: SidebarProps) {
     setActiveId(event.active.id as string);
   }, []);
 
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    setOverId(event.over?.id as string | null);
+  }, []);
+
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event;
       setActiveId(null);
+      setOverId(null);
 
       if (!over) return;
 
@@ -356,6 +392,7 @@ export function Sidebar({ onCreateAddress }: SidebarProps) {
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
               >
                 <div className="mt-3 space-y-2">
@@ -369,19 +406,27 @@ export function Sidebar({ onCreateAddress }: SidebarProps) {
                       onToggle={() => toggleFolder(folder.id)}
                       onRename={() => setEditingFolder(folder)}
                       onDelete={() => setDeletingFolder(folder)}
+                      isDropTarget={
+                        activeId !== null &&
+                        !activeId.startsWith('folder-') &&
+                        overId === `folder-${folder.id}`
+                      }
                     />
                   ))}
 
                   {/* Unfiled addresses */}
                   {(unfiledAddresses.length > 0 || folders.length > 0) && (
                     <div>
-                      {folders.length > 0 && (
-                        <div className="px-2 py-1.5 text-xs font-medium text-gray-400">
-                          Unfiled
-                        </div>
-                      )}
+                      <UnfiledDropZone
+                        isOver={
+                          activeId !== null &&
+                          !activeId.startsWith('folder-') &&
+                          overId === 'unfiled-drop'
+                        }
+                        showLabel={folders.length > 0}
+                      />
                       <SortableContext
-                        items={[...unfiledAddresses.map(a => a.id), 'unfiled-drop']}
+                        items={unfiledAddresses.map(a => a.id)}
                         strategy={verticalListSortingStrategy}
                       >
                         <div className="space-y-0.5">
