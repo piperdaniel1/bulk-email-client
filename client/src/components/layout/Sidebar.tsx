@@ -198,7 +198,7 @@ function FolderSection({
 }
 
 export function Sidebar({ onCreateAddress }: SidebarProps) {
-  const { addresses, loading: addressesLoading, moveToFolder, getAddressesByFolder } = useAddresses();
+  const { addresses, loading: addressesLoading, moveToFolder, getAddressesByFolder, refetch: refetchAddresses } = useAddresses();
   const { folders, loading: foldersLoading, deleteFolder } = useFolders();
   const { signOut } = useAuth();
 
@@ -446,7 +446,11 @@ export function Sidebar({ onCreateAddress }: SidebarProps) {
         <DeleteFolderModal
           isOpen={true}
           onClose={() => setDeletingFolder(null)}
-          onConfirm={() => deleteFolder(deletingFolder.id)}
+          onConfirm={async () => {
+            await deleteFolder(deletingFolder.id);
+            // Refetch addresses since they're cascade deleted with the folder
+            await refetchAddresses();
+          }}
           folderName={deletingFolder.name}
           addressCount={getAddressesByFolder(deletingFolder.id).length}
         />

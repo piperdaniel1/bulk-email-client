@@ -67,26 +67,29 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
           event: '*',
           schema: 'public',
           table: 'email_addresses',
-          filter: `user_id=eq.${user.id}`,
+          // No filter - DELETE events can't be filtered with RLS enabled
+          // (only primary key is sent). Unmatched IDs are harmlessly ignored.
         },
         (payload) => {
+          console.log('[Addresses Realtime]', payload.eventType, payload);
           if (payload.eventType === 'INSERT') {
+            const newAddr = payload.new as EmailAddress;
+            // Filter client-side since we removed server filter for DELETE events
+            if (newAddr.user_id !== user.id) return;
             setAddresses((prev) => {
-              // Avoid duplicates
-              if (prev.some(a => a.id === (payload.new as EmailAddress).id)) {
-                return prev;
-              }
-              return [payload.new as EmailAddress, ...prev];
+              if (prev.some(a => a.id === newAddr.id)) return prev;
+              return [newAddr, ...prev];
             });
           } else if (payload.eventType === 'DELETE') {
+            // Only has id, but unmatched IDs are harmlessly ignored
             setAddresses((prev) =>
               prev.filter((a) => a.id !== payload.old.id)
             );
           } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as EmailAddress;
+            if (updated.user_id !== user.id) return;
             setAddresses((prev) =>
-              prev.map((a) =>
-                a.id === payload.new.id ? (payload.new as EmailAddress) : a
-              )
+              prev.map((a) => a.id === updated.id ? updated : a)
             );
           }
         }
@@ -139,6 +142,9 @@ export function AddressesProvider({ children }: { children: ReactNode }) {
       .eq('id', addressId);
 
     if (deleteError) throw deleteError;
+
+    // Optimistically remove from state (don't wait for realtime)
+    setAddresses((prev) => prev.filter((a) => a.id !== addressId));
   }, []);
 
   const updateAddress = useCallback(

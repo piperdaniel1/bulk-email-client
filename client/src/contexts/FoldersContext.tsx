@@ -63,22 +63,28 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
           event: '*',
           schema: 'public',
           table: 'address_folders',
-          filter: `user_id=eq.${user.id}`,
+          // No filter - DELETE events can't be filtered with RLS enabled
+          // (only primary key is sent). Unmatched IDs are harmlessly ignored.
         },
         (payload) => {
+          console.log('[Folders Realtime]', payload.eventType, payload);
           if (payload.eventType === 'INSERT') {
+            const newFolder = payload.new as AddressFolder;
+            // Filter client-side since we removed server filter for DELETE events
+            if (newFolder.user_id !== user.id) return;
             setFolders((prev) => {
-              if (prev.some(f => f.id === (payload.new as AddressFolder).id)) {
-                return prev;
-              }
-              return [...prev, payload.new as AddressFolder].sort((a, b) => a.sort_order - b.sort_order);
+              if (prev.some(f => f.id === newFolder.id)) return prev;
+              return [...prev, newFolder].sort((a, b) => a.sort_order - b.sort_order);
             });
           } else if (payload.eventType === 'DELETE') {
+            // Only has id, but unmatched IDs are harmlessly ignored
             setFolders((prev) => prev.filter((f) => f.id !== payload.old.id));
           } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as AddressFolder;
+            if (updated.user_id !== user.id) return;
             setFolders((prev) =>
               prev
-                .map((f) => f.id === payload.new.id ? (payload.new as AddressFolder) : f)
+                .map((f) => f.id === updated.id ? updated : f)
                 .sort((a, b) => a.sort_order - b.sort_order)
             );
           }
@@ -136,6 +142,9 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
       .eq('id', folderId);
 
     if (deleteError) throw deleteError;
+
+    // Optimistically remove from state (don't wait for realtime)
+    setFolders((prev) => prev.filter((f) => f.id !== folderId));
   }, []);
 
   const reorderFolders = useCallback(
