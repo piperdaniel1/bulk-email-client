@@ -6,6 +6,7 @@ import { Login } from '@/pages/Login';
 import { UnifiedInbox } from '@/pages/UnifiedInbox';
 import { AddressInbox } from '@/pages/AddressInbox';
 import { ThreadView } from '@/pages/ThreadView';
+import { Settings } from '@/pages/Settings';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -80,6 +81,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <ThreadView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         }
       />
