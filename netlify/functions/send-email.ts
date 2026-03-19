@@ -278,6 +278,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
         success: true,
         email_id: email?.id,
         message_id: messageId,
+        from_email: fromEmail,
       }),
     };
   } catch (error) {
