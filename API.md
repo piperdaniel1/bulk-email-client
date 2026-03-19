@@ -2,10 +2,10 @@
 
 ## Authentication
 
-All API requests use the `ApiKey` authorization scheme:
+All API requests use Bearer authentication:
 
 ```
-Authorization: ApiKey bec_<key>
+Authorization: Bearer bec_<key>
 ```
 
 API keys are generated from the web UI's Settings page. The raw key is shown once on creation and cannot be retrieved again.
@@ -77,7 +77,7 @@ Create a new folder for organizing email addresses.
 
 ```bash
 curl -X POST https://<site>/api/api-folders-create \
-  -H "Authorization: ApiKey bec_abc123..." \
+  -H "Authorization: Bearer bec_abc123..." \
   -H "Content-Type: application/json" \
   -d '{"name": "My Folder"}'
 ```
@@ -109,7 +109,7 @@ List all folders on the account, ordered by sort order.
 
 ```bash
 curl -X POST https://<site>/api/api-folders-list \
-  -H "Authorization: ApiKey bec_abc123..."
+  -H "Authorization: Bearer bec_abc123..."
 ```
 
 ---
@@ -162,7 +162,7 @@ The full email address is `{local_part}@{domain}`.
 
 ```bash
 curl -X POST https://<site>/api/api-addresses-create \
-  -H "Authorization: ApiKey bec_abc123..." \
+  -H "Authorization: Bearer bec_abc123..." \
   -H "Content-Type: application/json" \
   -d '{"local_part": "hello", "folder_id": "550e8400-..."}'
 ```
@@ -209,17 +209,17 @@ List email addresses on the account. Optionally filter by folder.
 ```bash
 # All addresses
 curl -X POST https://<site>/api/api-addresses-list \
-  -H "Authorization: ApiKey bec_abc123..."
+  -H "Authorization: Bearer bec_abc123..."
 
 # Addresses in a specific folder
 curl -X POST https://<site>/api/api-addresses-list \
-  -H "Authorization: ApiKey bec_abc123..." \
+  -H "Authorization: Bearer bec_abc123..." \
   -H "Content-Type: application/json" \
   -d '{"folder_id": "550e8400-..."}'
 
 # Unfiled addresses only
 curl -X POST https://<site>/api/api-addresses-list \
-  -H "Authorization: ApiKey bec_abc123..." \
+  -H "Authorization: Bearer bec_abc123..." \
   -H "Content-Type: application/json" \
   -d '{"folder_id": null}'
 ```

@@ -45,29 +45,15 @@ export async function authenticateRequest(
     return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
   }
 
-  // JWT auth: Bearer <token>
-  if (authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
-    const userSupabase = createClient(
-      supabaseUrl,
-      process.env.VITE_SUPABASE_ANON_KEY || supabaseServiceKey
-    );
-    const {
-      data: { user },
-      error,
-    } = await userSupabase.auth.getUser(token);
-
-    if (error || !user) {
-      return { statusCode: 401, body: JSON.stringify({ error: 'Invalid token' }) };
-    }
-
-    return { userId: user.id, authMethod: 'jwt' };
+  if (!authHeader.startsWith('Bearer ')) {
+    return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
   }
 
-  // API key auth: ApiKey <key>
-  if (authHeader.startsWith('ApiKey ')) {
-    const key = authHeader.slice(7);
-    const hash = hashApiKey(key);
+  const token = authHeader.slice(7);
+
+  // API key auth: Bearer bec_<key>
+  if (token.startsWith('bec_')) {
+    const hash = hashApiKey(token);
 
     const { data, error } = await supabase
       .from('api_keys')
@@ -89,7 +75,21 @@ export async function authenticateRequest(
     return { userId: data.user_id, authMethod: 'apikey' };
   }
 
-  return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
+  // JWT auth
+  const userSupabase = createClient(
+    supabaseUrl,
+    process.env.VITE_SUPABASE_ANON_KEY || supabaseServiceKey
+  );
+  const {
+    data: { user },
+    error,
+  } = await userSupabase.auth.getUser(token);
+
+  if (error || !user) {
+    return { statusCode: 401, body: JSON.stringify({ error: 'Invalid token' }) };
+  }
+
+  return { userId: user.id, authMethod: 'jwt' };
 }
 
 export function isAuthError(result: AuthResult | AuthError): result is AuthError {

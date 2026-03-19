@@ -172,7 +172,7 @@ export function Settings() {
                   </button>
                 </div>
                 <p className="mt-2 text-xs text-amber-700">
-                  Use as: <code className="font-mono">Authorization: ApiKey {newKey.slice(0, 12)}...</code>
+                  Use as: <code className="font-mono">Authorization: Bearer {newKey.slice(0, 12)}...</code>
                 </p>
               </div>
             )}
