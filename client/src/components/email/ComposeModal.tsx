@@ -108,9 +108,9 @@ export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/50 sm:items-center sm:p-4">
+      <div className="flex w-full max-w-2xl flex-col bg-white shadow-xl sm:max-h-[90vh] sm:rounded-lg">
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
           <h2 className="text-lg font-semibold text-gray-900">
             {replyTo ? 'Reply' : 'New Email'}
           </h2>
@@ -124,14 +124,14 @@ export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <label className="w-16 text-sm text-gray-500">From:</label>
+              <label className="w-12 shrink-0 text-sm text-gray-500 sm:w-16">From:</label>
               <select
                 value={fromAddressId}
                 onChange={(e) => setFromAddressId(e.target.value)}
-                className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               >
                 {addresses.map((addr) => (
                   <option key={addr.id} value={addr.id}>
@@ -144,7 +144,7 @@ export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="w-16 text-sm text-gray-500">To:</label>
+              <label className="w-12 shrink-0 text-sm text-gray-500 sm:w-16">To:</label>
               <input
                 type="text"
                 value={to}
@@ -166,7 +166,7 @@ export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
 
             {showCc && (
               <div className="flex items-center gap-2">
-                <label className="w-16 text-sm text-gray-500">Cc:</label>
+                <label className="w-12 shrink-0 text-sm text-gray-500 sm:w-16">Cc:</label>
                 <input
                   type="text"
                   value={cc}
@@ -178,7 +178,7 @@ export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
             )}
 
             <div className="flex items-center gap-2">
-              <label className="w-16 text-sm text-gray-500">Subject:</label>
+              <label className="w-12 shrink-0 text-sm text-gray-500 sm:w-16">Subject:</label>
               <input
                 type="text"
                 value={subject}
@@ -202,7 +202,7 @@ export function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalProps) {
                 }
               }}
               placeholder="Write your message... (Ctrl+Enter to send)"
-              rows={12}
+              rows={8}
               className="w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />
 

@@ -83,14 +83,14 @@ export function QuickReply({ replyToEmail, threadId, onSent }: QuickReplyProps) 
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
       <form onSubmit={handleSubmit}>
-        <div className="mb-3 flex items-center gap-2 text-sm">
+        <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           <span className="text-gray-500">Reply as:</span>
           <select
             value={fromAddressId}
             onChange={(e) => setFromAddressId(e.target.value)}
-            className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+            className="min-w-0 max-w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
           >
             {addresses.map((addr) => (
               <option key={addr.id} value={addr.id}>
@@ -101,7 +101,7 @@ export function QuickReply({ replyToEmail, threadId, onSent }: QuickReplyProps) 
             ))}
           </select>
           <span className="text-gray-400">to</span>
-          <span className="text-gray-700">{replyTo}</span>
+          <span className="truncate text-gray-700">{replyTo}</span>
         </div>
 
         <textarea

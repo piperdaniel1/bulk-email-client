@@ -79,8 +79,8 @@ export function CreateFolderModal({ isOpen, onClose, editFolder }: CreateFolderM
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-sm rounded-lg bg-white p-5 shadow-xl sm:p-6">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">
           {isEditing ? 'Rename Folder' : 'Create Folder'}
         </h2>

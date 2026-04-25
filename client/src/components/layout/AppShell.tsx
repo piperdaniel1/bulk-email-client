@@ -1,4 +1,5 @@
-import { ReactNode, useState, useCallback } from 'react';
+import { ReactNode, useState, useCallback, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { CreateAddressModal } from '@/components/address/CreateAddressModal';
@@ -12,6 +13,8 @@ interface AppShellProps {
 export function AppShell({ children, onSearch }: AppShellProps) {
   const [showCreateAddress, setShowCreateAddress] = useState(false);
   const [showCompose, setShowCompose] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
 
   const handleCreateAddress = useCallback(() => {
     setShowCreateAddress(true);
@@ -21,15 +24,28 @@ export function AppShell({ children, onSearch }: AppShellProps) {
     setShowCompose(true);
   }, []);
 
+  const openSidebar = useCallback(() => setSidebarOpen(true), []);
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar onCreateAddress={handleCreateAddress} />
+      <Sidebar
+        onCreateAddress={handleCreateAddress}
+        isOpen={sidebarOpen}
+        onClose={closeSidebar}
+      />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header
           onSearch={onSearch}
           onCompose={handleCompose}
           onCreateAddress={handleCreateAddress}
+          onOpenSidebar={openSidebar}
         />
 
         <main className="flex-1 overflow-y-auto">{children}</main>

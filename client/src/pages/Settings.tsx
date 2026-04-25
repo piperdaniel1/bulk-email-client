@@ -91,7 +91,7 @@ export function Settings() {
 
   return (
     <div className="flex h-screen">
-      <aside className="flex h-full w-[25rem] flex-col border-r border-gray-200 bg-white">
+      <aside className="hidden h-full w-[25rem] flex-col border-r border-gray-200 bg-white lg:flex">
         <div className="flex h-16 items-center border-b border-gray-200 px-4">
           <h1 className="text-xl font-semibold text-gray-900">Email Client</h1>
         </div>
@@ -119,8 +119,25 @@ export function Settings() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto bg-gray-50 p-8">
-        <div className="mx-auto max-w-2xl">
+      <main className="flex flex-1 flex-col overflow-y-auto bg-gray-50">
+        <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 lg:hidden">
+          <NavLink
+            to="/"
+            className="flex items-center gap-2 text-sm font-medium text-gray-700"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Inbox
+          </NavLink>
+          <button
+            onClick={() => signOut()}
+            className="rounded-lg px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+          >
+            Sign Out
+          </button>
+        </div>
+        <div className="mx-auto w-full max-w-2xl p-4 sm:p-8">
           <h2 className="text-2xl font-semibold text-gray-900">Settings</h2>
 
           <section className="mt-8">
@@ -130,7 +147,7 @@ export function Settings() {
             </p>
 
             {/* Generate form */}
-            <form onSubmit={handleGenerate} className="mt-4 flex gap-3">
+            <form onSubmit={handleGenerate} className="mt-4 flex flex-col gap-3 sm:flex-row">
               <input
                 type="text"
                 value={name}
@@ -184,7 +201,8 @@ export function Settings() {
               ) : keys.length === 0 ? (
                 <p className="text-sm text-gray-500">No API keys yet.</p>
               ) : (
-                <table className="w-full text-sm">
+                <div className="-mx-4 overflow-x-auto sm:mx-0">
+                <table className="w-full min-w-[36rem] text-sm">
                   <thead>
                     <tr className="border-b border-gray-200 text-left text-gray-500">
                       <th className="pb-2 font-medium">Name</th>
@@ -221,6 +239,7 @@ export function Settings() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
           </section>

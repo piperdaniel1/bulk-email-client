@@ -19,13 +19,13 @@ export function MessageBubble({ email, isExpanded = true, onToggle }: MessageBub
     if (showHtml && email.body_html) {
       return (
         <div
-          className="prose prose-sm max-w-none"
+          className="prose prose-sm max-w-none break-words"
           dangerouslySetInnerHTML={{ __html: email.body_html }}
         />
       );
     }
     return (
-      <pre className="whitespace-pre-wrap font-sans text-sm text-gray-700">
+      <pre className="whitespace-pre-wrap break-words font-sans text-sm text-gray-700">
         {email.body_text || '(no content)'}
       </pre>
     );
@@ -34,7 +34,7 @@ export function MessageBubble({ email, isExpanded = true, onToggle }: MessageBub
   return (
     <div className={`rounded-lg border ${isOutbound ? 'border-blue-200 bg-blue-50/50' : 'border-gray-200 bg-white'}`}>
       <div
-        className="flex cursor-pointer items-start gap-3 p-4"
+        className="flex cursor-pointer items-start gap-2 p-3 sm:gap-3 sm:p-4"
         onClick={onToggle}
       >
         <Avatar
@@ -44,9 +44,9 @@ export function MessageBubble({ email, isExpanded = true, onToggle }: MessageBub
         />
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-900">
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="truncate font-medium text-gray-900">
                 {email.from_name || email.from_address}
               </span>
               {isOutbound && (
@@ -58,7 +58,7 @@ export function MessageBubble({ email, isExpanded = true, onToggle }: MessageBub
             </span>
           </div>
 
-          <div className="text-sm text-gray-600">
+          <div className="truncate text-sm text-gray-600">
             <span>To: </span>
             {email.to_addresses.map((r, i) => (
               <span key={r.email}>
@@ -89,7 +89,7 @@ export function MessageBubble({ email, isExpanded = true, onToggle }: MessageBub
       </div>
 
       {isExpanded && (
-        <div className="border-t border-gray-100 p-4">
+        <div className="overflow-x-auto border-t border-gray-100 p-3 sm:p-4">
           {email.body_html && email.body_text && (
             <div className="mb-3 flex gap-2">
               <button

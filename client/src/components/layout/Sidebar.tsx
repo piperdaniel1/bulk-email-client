@@ -31,6 +31,8 @@ import type { EmailAddress, AddressFolder } from '@/types';
 
 interface SidebarProps {
   onCreateAddress: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 // Unfiled drop zone component
@@ -227,7 +229,7 @@ function FolderSection({
   );
 }
 
-export function Sidebar({ onCreateAddress }: SidebarProps) {
+export function Sidebar({ onCreateAddress, isOpen = false, onClose }: SidebarProps) {
   const { addresses, loading: addressesLoading, moveToFolder, getAddressesByFolder, refetch: refetchAddresses } = useAddresses();
   const { folders, loading: foldersLoading, deleteFolder } = useFolders();
   const { signOut } = useAuth();
@@ -316,9 +318,31 @@ export function Sidebar({ onCreateAddress }: SidebarProps) {
 
   return (
     <>
-      <aside className="flex h-full w-[25rem] flex-col border-r border-gray-200 bg-white">
-        <div className="flex h-16 items-center border-b border-gray-200 px-4">
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex h-full w-[85vw] max-w-[20rem] flex-col border-r border-gray-200 bg-white transition-transform duration-200 lg:static lg:w-[25rem] lg:max-w-none lg:translate-x-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex h-16 items-center justify-between border-b border-gray-200 px-4">
           <h1 className="text-xl font-semibold text-gray-900">Email Client</h1>
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-gray-500 hover:bg-gray-100 lg:hidden"
+            aria-label="Close menu"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4">

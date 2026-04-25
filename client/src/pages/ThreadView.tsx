@@ -54,7 +54,7 @@ export function ThreadView() {
 
   return (
     <AppShell>
-      <div className="h-full overflow-y-auto bg-gray-50 p-4">
+      <div className="h-full overflow-y-auto bg-gray-50 p-3 sm:p-4">
         <div className="mx-auto max-w-4xl">
           <Link
             to="/"

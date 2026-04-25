@@ -89,11 +89,11 @@ export function ThreadMessages({ threadId, subject }: ThreadMessagesProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="min-w-0 break-words text-lg font-semibold text-gray-900 sm:text-xl">
           {subject || '(no subject)'}
         </h1>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <button
             onClick={expandAll}
             className="text-sm text-blue-600 hover:text-blue-800"
